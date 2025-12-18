@@ -728,7 +728,7 @@ class AdminApp:
         self.inv_search_entry.pack(side='left', padx=(10, 10), ipady=5)
         self.inv_search_entry.bind('<KeyRelease>', lambda e: self.search_inventory())
 
-        search_button = tk.Button(search_frame, text="Search", font=("Segoe UI", 11),
+        search_button = tk.Button(search_frame, text="🔍 Search", font=("Segoe UI", 11),
                                 bg=self.accent_color, fg=self.text_color, bd=0,
                                 cursor="hand2", width=10, command=self.search_inventory)
         search_button.pack(side='left')
@@ -988,26 +988,49 @@ class AdminApp:
         
         tk.Label(container, text="Order Management", font=("Segoe UI", 32, "bold"),
                 bg=self.bg_color, fg=self.text_color).pack(anchor='w', pady=(0, 20))
-        # Top control frame (filters and actions in one row)
+        
+       # Top control frame with filter buttons AND action buttons in one row
         top_control_frame = tk.Frame(container, bg=self.bg_color)
         top_control_frame.pack(fill='x', pady=(0, 15))
-        # Filter buttons
-        filter_frame = tk.Frame(container, bg=self.bg_color)
-        filter_frame.pack(fill='x', pady=(0, 15))
-        
+
+        # Create a sub-frame to hold ALL buttons (filters and actions) in one row
+        all_buttons_frame = tk.Frame(top_control_frame, bg=self.bg_color)
+        all_buttons_frame.pack(fill='x')
+
+        # Left side: Filter buttons
+        filter_frame = tk.Frame(all_buttons_frame, bg=self.bg_color)
+        filter_frame.pack(side='left')
+
         self.order_filter = tk.StringVar(value="Pending")
-        
+
+        # Filter buttons (Pending, Approved, All)
         for status in ["Pending", "Approved", "All"]:
             btn = tk.Button(filter_frame, text=status, font=("Segoe UI", 11),
-                          bg=self.accent_color if status == "Pending" else self.secondary_bg,
-                          fg=self.text_color, bd=0, cursor="hand2", padx=15, pady=8,
-                          command=lambda s=status: self.filter_orders(s, parent))
+                        bg=self.accent_color if status == "Pending" else self.secondary_bg,
+                        fg=self.text_color, bd=0, cursor="hand2", padx=20, pady=10,
+                        command=lambda s=status: self.filter_orders(s, parent))
             btn.pack(side='left', padx=(0, 10))
-        
-        # Orders treeview
+
+        # Right side: Action buttons (Approve, Reject, Refresh)
+        action_frame = tk.Frame(all_buttons_frame, bg=self.bg_color)
+        action_frame.pack(side='right')
+
+        tk.Button(action_frame, text="✓ Approve Order", font=("Segoe UI", 11, "bold"),
+                bg=self.success_color, fg="white", bd=0, cursor="hand2",
+                padx=20, pady=10, command=self.approve_order).pack(side='left', padx=(0, 10))
+
+        tk.Button(action_frame, text="✗ Reject Order", font=("Segoe UI", 11),
+                bg=self.danger_color, fg="white", bd=0, cursor="hand2",
+                padx=20, pady=10, command=self.reject_order).pack(side='left', padx=(0, 10))
+
+        tk.Button(action_frame, text="↻ Refresh", font=("Segoe UI", 11),
+                bg=self.secondary_bg, fg=self.text_color, bd=0, cursor="hand2",
+                padx=20, pady=10, command=lambda: self.load_orders("Pending")).pack(side='left')
+
+        # Orders treeview below the button row
         columns = ('ID', 'User', 'Item', 'Qty', 'Price', 'Total', 'Status', 'Date')
         self.orders_tree = ttk.Treeview(container, columns=columns, show='headings', height=15)
-        
+
         for col in columns:
             self.orders_tree.heading(col, text=col)
             if col == 'ID':
@@ -1020,28 +1043,12 @@ class AdminApp:
                 self.orders_tree.column(col, width=100)
             else:
                 self.orders_tree.column(col, width=120)
-        
+
         scrollbar = ttk.Scrollbar(container, orient='vertical', command=self.orders_tree.yview)
         self.orders_tree.configure(yscrollcommand=scrollbar.set)
-        
+
         self.orders_tree.pack(side='left', fill='both', expand=True, pady=(0, 15))
         scrollbar.pack(side='right', fill='y', pady=(0, 15))
-        
-        # Right side: Action buttons
-        action_frame = tk.Frame(top_control_frame, bg=self.bg_color)
-        action_frame.pack(side='right')
-
-        tk.Button(action_frame, text="✓ Approve Order", font=("Segoe UI", 11, "bold"),
-                bg=self.success_color, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=10, command=self.approve_order).pack(side='left', padx=(0, 10))
-
-        tk.Button(action_frame, text="✗ Reject Order", font=("Segoe UI", 11),
-                bg=self.danger_color, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=10, command=self.reject_order).pack(side='left', padx=(0, 10))
-
-        tk.Button(action_frame, text="↻ Refresh", font=("Segoe UI", 11),
-                bg=self.secondary_bg, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=10, command=lambda: self.load_orders("Pending")).pack(side='left')
 
         self.load_orders("Pending")
     
@@ -1309,7 +1316,7 @@ class AdminApp:
         self.menu_search_entry.bind('<KeyRelease>', lambda e: self.search_menu_items())
 
         # Search button
-        tk.Button(search_frame, text="Search", font=("Segoe UI", 11),
+        tk.Button(search_frame, text="🔍Search", font=("Segoe UI", 11),
                 bg=self.accent_color, fg=self.text_color, bd=0, cursor="hand2",
                 width=10, command=self.search_menu_items).pack(side='left')
 
@@ -1733,22 +1740,40 @@ class AdminApp:
         
         container = tk.Frame(parent, bg=self.bg_color)
         container.pack(fill='both', expand=True, padx=40, pady=40)
-        
-        # Title
+
+        # Title frame with buttons on the same line
         header = tk.Frame(container, bg=self.bg_color)
         header.pack(fill='x', pady=(0, 20))
-        
+
+        # Title on the left
         tk.Label(header, text="Pending Account Approvals", font=("Segoe UI", 32, "bold"),
                 bg=self.bg_color, fg=self.text_color).pack(side='left')
-        
-        tk.Button(header, text="↻ Refresh", font=("Segoe UI", 11),
-                 bg=self.accent_color, fg=self.text_color, bd=0, cursor="hand2",
-                 padx=15, pady=8, command=lambda: self.load_pending_accounts()).pack(side='right')
-        
+
+        # Create a frame for buttons on the right
+        button_container = tk.Frame(header, bg=self.bg_color)
+        button_container.pack(side='right')
+
+        # Add spacing between label and buttons using a spacer
+        spacer = tk.Frame(header, bg=self.bg_color, width=100)
+        spacer.pack(side='left', fill='y', expand=True)
+
+        # Buttons with equal spacing
+        tk.Button(button_container, text="✓ Approve", font=("Segoe UI", 11, "bold"),
+                bg=self.success_color, fg="white", bd=0, cursor="hand2",
+                padx=20, pady=10, command=self.approve_account).pack(side='left', padx=(0, 15))
+
+        tk.Button(button_container, text="✗ Reject", font=("Segoe UI", 11),
+                bg=self.danger_color, fg="white", bd=0, cursor="hand2",
+                padx=20, pady=10, command=self.reject_account).pack(side='left', padx=(0, 15))
+
+        tk.Button(button_container, text="↻ Refresh", font=("Segoe UI", 11),
+                bg=self.accent_color, fg="white", bd=0, cursor="hand2",
+                padx=20, pady=10, command=lambda: self.load_pending_accounts()).pack(side='left')
+
         # Treeview
         columns = ('ID', 'Username', 'Full Name', 'Phone', 'Balance', 'Created')
         self.pending_tree = ttk.Treeview(container, columns=columns, show='headings', height=15)
-        
+
         for col in columns:
             self.pending_tree.heading(col, text=col)
             if col == 'ID':
@@ -1761,25 +1786,17 @@ class AdminApp:
                 self.pending_tree.column(col, width=100)
             else:
                 self.pending_tree.column(col, width=150)
-        
+
         scrollbar = ttk.Scrollbar(container, orient='vertical', command=self.pending_tree.yview)
         self.pending_tree.configure(yscrollcommand=scrollbar.set)
-        
+
         self.pending_tree.pack(side='left', fill='both', expand=True, pady=(0, 15))
         scrollbar.pack(side='right', fill='y', pady=(0, 15))
-        
-        # Action buttons
-        action_frame = tk.Frame(container, bg=self.bg_color)
-        action_frame.pack(fill='x')
-        
-        tk.Button(action_frame, text="✓ Approve Account", font=("Segoe UI", 11, "bold"),
-                 bg=self.success_color, fg=self.text_color, bd=0, cursor="hand2",
-                 padx=20, pady=10, command=self.approve_account).pack(side='left', padx=(0, 10))
-        
-        tk.Button(action_frame, text="✗ Reject Account", font=("Segoe UI", 11),
-                 bg=self.danger_color, fg=self.text_color, bd=0, cursor="hand2",
-                 padx=20, pady=10, command=self.reject_account).pack(side='left')
-        
+
+        # Remove the old action_frame since buttons are now in header
+        # action_frame = tk.Frame(container, bg=self.bg_color)
+        # action_frame.pack(fill='x')
+
         self.load_pending_accounts()
     
     def load_pending_accounts(self):
@@ -1866,102 +1883,137 @@ class AdminApp:
         self.clear_content(parent)
         
         container = tk.Frame(parent, bg=self.bg_color)
-        container.pack(fill='both', expand=True, padx=40, pady=40)
-        
-        # Title and filters
+        container.pack(fill='both', expand=True, padx=30, pady=30)
+
+        # ==================== HEADER SECTION ====================
         header = tk.Frame(container, bg=self.bg_color)
-        header.pack(fill='x', pady=(0, 20))
-        
+        header.pack(fill='x', pady=(0, 25))
+
+        # Title on left
         tk.Label(header, text="All Users Management", font=("Segoe UI", 32, "bold"),
                 bg=self.bg_color, fg=self.text_color).pack(side='left')
-        
-        # Filter buttons
+
+        # Spacer
+        spacer = tk.Frame(header, bg=self.bg_color)
+        spacer.pack(side='left', fill='x', expand=True)
+
+        # Filter buttons on right
         filter_frame = tk.Frame(header, bg=self.bg_color)
         filter_frame.pack(side='right')
-        
+
         self.users_filter = tk.StringVar(value="All")
-        
         for status in ["All", "Approved", "Pending"]:
-            btn = tk.Button(filter_frame, text=status, font=("Segoe UI", 10),
-                          bg=self.accent_color if status == "All" else self.secondary_bg,
-                          fg=self.text_color, bd=0, cursor="hand2", padx=12, pady=6,
-                          command=lambda s=status: self.filter_users(s))
-            btn.pack(side='left', padx=(5, 0))
-        
-        # Search and action buttons in one frame
-        top_control_frame = tk.Frame(container, bg=self.bg_color)
-        top_control_frame.pack(fill='x', pady=(0, 15))
+            btn = tk.Button(filter_frame, text=status, font=("Segoe UI", 12),
+                        bg=self.accent_color if status == "All" else self.secondary_bg,
+                        fg="white" if status == "All" else self.text_color, 
+                        bd=0, cursor="hand2", padx=20, pady=6,
+                        command=lambda s=status: self.filter_users(s))
+            btn.pack(side='left', padx=(0, 8))
 
-        # Left side: Search
-        search_frame = tk.Frame(top_control_frame, bg=self.bg_color)
-        search_frame.pack(side='left')
+        # ==================== SEARCH & ACTION BUTTONS ROW ====================
+        # Single row containing: Search label, Search box, Search button, ALL action buttons, Refresh
+        action_row = tk.Frame(container, bg=self.bg_color)
+        action_row.pack(fill='x', pady=(0, 25))
 
-        tk.Label(search_frame, text="Search:", font=("Segoe UI", 12),
-                bg=self.bg_color, fg=self.text_color).pack(side='left')
+        # Left side: Search section
+        search_section = tk.Frame(action_row, bg=self.bg_color)
+        search_section.pack(side='left')
 
-        self.users_search_entry = tk.Entry(search_frame, font=("Segoe UI", 11), width=40,
-                                        bg="#3d3d3d", fg=self.text_color, insertbackground=self.text_color, bd=0)
-        self.users_search_entry.pack(side='left', padx=(10, 10), ipady=5)
+        # Search label
+        tk.Label(search_section, text="Search User:", font=("Segoe UI", 12, "bold"),
+                bg=self.bg_color, fg=self.text_color).pack(side='left', padx=(0, 10))
+
+        # Search entry
+        self.users_search_entry = tk.Entry(search_section, font=("Segoe UI", 12), 
+                                        width=25, bg="#3d3d3d", fg=self.text_color, 
+                                        insertbackground=self.text_color, bd=1, relief='solid')
+        self.users_search_entry.pack(side='left', ipady=6, ipadx=10)
         self.users_search_entry.bind('<KeyRelease>', lambda e: self.search_users())
 
-        # Refresh button (after search)
-        tk.Button(search_frame, text="↻ Refresh", font=("Segoe UI", 10),
+        # Search button
+        tk.Button(search_section, text="🔍", font=("Segoe UI", 9),
+                bg=self.accent_color, fg="white", bd=0, cursor="hand2",
+                padx=12, pady=7, command=self.search_users).pack(side='left', padx=(10, 20))
+
+        # Middle: All action buttons
+        action_section = tk.Frame(action_row, bg=self.bg_color)
+        action_section.pack(side='left', padx=(20, 0))
+
+        # Define action buttons with consistent styling
+        action_buttons = [
+            ("💰 Add Balance", self.success_color, self.add_user_balance),
+            ("⏱️ Set Limit", self.accent_color, self.set_time_limit),
+            ("💵 Set Rate", self.accent_color, self.set_hourly_rate),
+            ("🔄 Status", self.warning_color, self.toggle_user_status),
+            ("🗑️ Delete", self.danger_color, self.delete_user)
+        ]
+
+        # Create all action buttons in one row
+        for text, color, command in action_buttons:
+            btn = tk.Button(action_section, text=text, font=("Segoe UI", 10, "bold"),
+                        bg=color, fg="white", bd=0, cursor="hand2",
+                        padx=12, pady=6, command=command)
+            btn.pack(side='left', padx=(0, 8))
+
+        # Right side: Refresh button
+        refresh_section = tk.Frame(action_row, bg=self.bg_color)
+        refresh_section.pack(side='right')
+
+        tk.Button(refresh_section, text="↻ Refresh", font=("Segoe UI", 11, "bold"),
                 bg=self.secondary_bg, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=6, command=lambda: self.load_all_users("All")).pack(side='left')
-        
-        # Treeview
+                padx=20, pady=8, command=lambda: self.load_all_users("All")).pack(side='right')
+
+        # ==================== TREEVIEW SECTION ====================
+        tree_container = tk.Frame(container, bg=self.bg_color)
+        tree_container.pack(fill='both', expand=True)
+
         columns = ('ID', 'Username', 'Full Name', 'Phone', 'Balance', 'Rate', 'Time Limit', 'Status', 'Created')
-        self.users_tree = ttk.Treeview(container, columns=columns, show='headings', height=15)
-        
+        self.users_tree = ttk.Treeview(tree_container, columns=columns, show='headings', height=16)
+
+        # Column widths
+        col_widths = {
+            'ID': 50,
+            'Username': 120,
+            'Full Name': 140,
+            'Phone': 110,
+            'Balance': 90,
+            'Rate': 80,
+            'Time Limit': 95,
+            'Status': 85,
+            'Created': 120
+        }
+
         for col in columns:
-            self.users_tree.heading(col, text=col)
-            if col == 'ID':
-                self.users_tree.column(col, width=50)
-            elif col in ['Username', 'Full Name']:
-                self.users_tree.column(col, width=150)
-            elif col == 'Phone':
-                self.users_tree.column(col, width=120)
-            elif col in ['Balance', 'Rate']:
-                self.users_tree.column(col, width=100)
-            elif col == 'Time Limit':
-                self.users_tree.column(col, width=90)
-            elif col == 'Status':
-                self.users_tree.column(col, width=80)
-            else:
-                self.users_tree.column(col, width=130)
-        
-        scrollbar = ttk.Scrollbar(container, orient='vertical', command=self.users_tree.yview)
-        self.users_tree.configure(yscrollcommand=scrollbar.set)
-        
-        self.users_tree.pack(side='left', fill='both', expand=True, pady=(0, 15))
-        scrollbar.pack(side='right', fill='y', pady=(0, 15))
-        
-        # Action buttons
-        action_frame = tk.Frame(top_control_frame, bg=self.bg_color)
-        action_frame.pack(side='right')
+            self.users_tree.heading(col, text=col, anchor='w')
+            self.users_tree.column(col, width=col_widths.get(col, 100), anchor='w')
 
-        tk.Button(action_frame, text="💰 Add Balance", font=("Segoe UI", 11),
-                bg=self.accent_color, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=10, command=self.add_user_balance).pack(side='left', padx=(0, 10))
+        # Scrollbars
+        v_scrollbar = ttk.Scrollbar(tree_container, orient='vertical', command=self.users_tree.yview)
+        self.users_tree.configure(yscrollcommand=v_scrollbar.set)
 
-        tk.Button(action_frame, text="⏱️ Set Time Limit", font=("Segoe UI", 11),
-                bg=self.secondary_bg, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=10, command=self.set_time_limit).pack(side='left', padx=(0, 10))
+        self.users_tree.pack(side='left', fill='both', expand=True, padx=(0, 5))
+        v_scrollbar.pack(side='right', fill='y')
 
-        tk.Button(action_frame, text="💵 Set Rate", font=("Segoe UI", 11),
-                bg=self.secondary_bg, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=10, command=self.set_hourly_rate).pack(side='left', padx=(0, 10))
+        # ==================== STATUS BAR ====================
+        status_frame = tk.Frame(container, bg=self.secondary_bg, height=30)
+        status_frame.pack(fill='x', pady=(15, 0))
+        status_frame.pack_propagate(False)
 
-        tk.Button(action_frame, text="🔄 Toggle Status", font=("Segoe UI", 11),
-                bg=self.warning_color, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=10, command=self.toggle_user_status).pack(side='left', padx=(0, 10))
+        self.status_label = tk.Label(status_frame, text="Total Users: 0 | Selected: 0", 
+                                    font=("Segoe UI", 10),
+                                    bg=self.secondary_bg, fg=self.text_secondary)
+        self.status_label.pack(side='left', padx=15)
 
-        tk.Button(action_frame, text="🗑️ Delete User", font=("Segoe UI", 11),
-                bg=self.danger_color, fg=self.text_color, bd=0, cursor="hand2",
-                padx=15, pady=10, command=self.delete_user).pack(side='left')
+        # Bind selection event
+        def update_status_label(event):
+            selected = len(self.users_tree.selection())
+            self.status_label.config(text=f"Total Users: {self.users_tree.get_children().__len__()} | Selected: {selected}")
 
+        self.users_tree.bind('<<TreeviewSelect>>', update_status_label)
+
+        # Load initial data
         self.load_all_users("All")
-    
+            
     def filter_users(self, status):
         """Filter users by status"""
         self.users_filter.set(status)
@@ -2558,8 +2610,9 @@ class AdminApp:
     • Export for accounting
     • Monitor sales trends
     • Identify popular items""",
-
-            "Kiosk Mode Control": """🔒 KIOSK MODE CONTROL - SECURITY SYSTEM
+    
+    "Kiosk Mode Control":
+    """🔒 KIOSK MODE CONTROL - SECURITY SYSTEM
 
     WHAT IS KIOSK MODE?
     • System-wide security feature

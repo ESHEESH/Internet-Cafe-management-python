@@ -98,7 +98,7 @@ class CafeFrame(tk.Frame):
             self.option_buttons[option] = btn
         
         # Cart items frame - REDUCED HEIGHT to show button
-        cart_items_container = tk.Frame(cart_container, bg=app.secondary_bg, height=250)
+        cart_items_container = tk.Frame(cart_container, bg=app.secondary_bg, height=200)
         cart_items_container.pack(fill='x', padx=0, pady=0)
         cart_items_container.pack_propagate(False)
         
@@ -603,7 +603,6 @@ class CafeFrame(tk.Frame):
                                order_type, order_status, order_date
                         FROM orders
                         WHERE user_id = %s AND order_status = %s
-                                   # ... continuation from: WHERE user_id = %s AND order_status = %s
                         ORDER BY order_date DESC
                     """, (self.app.current_user['user_id'], status_filter))
 

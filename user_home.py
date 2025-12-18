@@ -7,9 +7,30 @@ class HomeFrame(tk.Frame):
         super().__init__(parent, bg=app.bg_color)
         self.app = app
         
-        # Main container with padding
-        container = tk.Frame(self, bg=app.bg_color)
-        container.pack(fill='both', expand=True, padx=30, pady=30)
+        # Create scrollable main container
+        main_canvas = tk.Canvas(self, bg=app.bg_color, highlightthickness=0)
+        main_scrollbar = ttk.Scrollbar(self, orient="vertical", command=main_canvas.yview)
+        container = tk.Frame(main_canvas, bg=app.bg_color)
+        
+        container.bind(
+            "<Configure>",
+            lambda e: main_canvas.configure(scrollregion=main_canvas.bbox("all"))
+        )
+        
+        main_canvas.create_window((0, 0), window=container, anchor="nw")
+        main_canvas.configure(yscrollcommand=main_scrollbar.set)
+        
+        main_canvas.pack(side="left", fill="both", expand=True)
+        main_scrollbar.pack(side="right", fill="y")
+        
+        # Mouse wheel scrolling
+        def _on_mousewheel(event):
+            main_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        main_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Add padding to container
+        container.configure(padx=30, pady=30)
         
         # Welcome section
         welcome_frame = tk.Frame(container, bg=app.secondary_bg, padx=40, pady=30,
@@ -123,16 +144,20 @@ class HomeFrame(tk.Frame):
         # Recent Orders Card
         orders_card = tk.Frame(container, bg=app.secondary_bg, padx=40, pady=30, relief='flat', bd=0)
         orders_card.pack(fill='x', pady=(25, 0))
-        
+
         orders_header = tk.Frame(orders_card, bg=app.secondary_bg)
         orders_header.pack(fill='x', anchor='w', pady=(0, 20))
-        
+
         tk.Label(orders_header, text="📦", font=("Segoe UI", 20),
                 bg=app.secondary_bg).pack(side='left', padx=(0, 10))
-        
+
         tk.Label(orders_header, text="Recent Orders", font=("Segoe UI", 18, "bold"),
                 bg=app.secondary_bg, fg=app.dark_brown).pack(side='left')
-        
+
+        # Add spacer to push count to right with margin for scrollbar
+        spacer = tk.Frame(orders_header, bg=app.secondary_bg)
+        spacer.pack(side='left', fill='x', expand=True)
+
         try:
             cursor = app.db_connection.cursor()
             cursor.execute(
@@ -143,9 +168,13 @@ class HomeFrame(tk.Frame):
             cursor.close()
         except Error:
             order_count = 0
-        
-        tk.Label(orders_header, text=f"{order_count} orders this week", font=("Segoe UI", 12),
-                bg=app.secondary_bg, fg=app.text_secondary).pack(side='right')
+
+        # Add right padding to account for scrollbar
+        count_frame = tk.Frame(orders_header, bg=app.secondary_bg)
+        count_frame.pack(side='right', padx=(0, 20))  # Add right padding
+
+        tk.Label(count_frame, text=f"{order_count} orders this week", font=("Segoe UI", 12),
+                bg=app.secondary_bg, fg=app.text_secondary).pack()
         
         # Cafe Promotions Section
         promo_frame = tk.Frame(container, bg=app.secondary_bg, padx=40, pady=35, relief='flat', bd=0)
