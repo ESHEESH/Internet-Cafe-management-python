@@ -75,35 +75,152 @@ class AccountsFrame(tk.Frame):
         tk.Label(password_card, text="Change Password 🔒", font=("Segoe UI", 18, "bold"),
                 bg=app.secondary_bg, fg=app.dark_brown).pack(anchor='w', pady=(0, 20))
         
-        # Current password
+        # Current password with toggle
         tk.Label(password_card, text="Current Password", font=("Segoe UI", 10),
                 bg=app.secondary_bg, fg=app.text_secondary).pack(anchor='w', pady=(0, 5))
         
-        current_pw_entry = tk.Entry(password_card, font=("Segoe UI", 11), show="●",
+        current_pw_frame = tk.Frame(password_card, bg=app.secondary_bg)
+        current_pw_frame.pack(fill='x', pady=(0, 15))
+        
+        current_pw_entry = tk.Entry(current_pw_frame, font=("Segoe UI", 11), show="●",
                                     bg="#FAF5EF", fg=app.text_color, 
                                     insertbackground=app.text_color, bd=0,
                                     relief='flat', highlightthickness=0)
-        current_pw_entry.pack(fill='x', ipady=10, pady=(0, 15))
+        current_pw_entry.pack(side='left', fill='x', expand=True, ipady=10)
         
-        # New password
+        def toggle_current_password():
+            if current_pw_entry.cget('show') == '●':
+                current_pw_entry.config(show='')
+                current_show_btn.config(text='🙈')
+            else:
+                current_pw_entry.config(show='●')
+                current_show_btn.config(text='👁')
+        
+        current_show_btn = tk.Button(current_pw_frame, text="👁", font=("Segoe UI", 10),
+                                    bg="#FAF5EF", fg=app.text_color, bd=0, cursor="hand2",
+                                    command=toggle_current_password, width=3)
+        current_show_btn.pack(side='right', padx=(5, 0), ipady=10)
+        
+        # New password with toggle
         tk.Label(password_card, text="New Password", font=("Segoe UI", 10),
                 bg=app.secondary_bg, fg=app.text_secondary).pack(anchor='w', pady=(0, 5))
         
-        new_pw_entry = tk.Entry(password_card, font=("Segoe UI", 11), show="●",
+        new_pw_frame = tk.Frame(password_card, bg=app.secondary_bg)
+        new_pw_frame.pack(fill='x', pady=(0, 10))
+        
+        new_pw_entry = tk.Entry(new_pw_frame, font=("Segoe UI", 11), show="●",
                                bg="#FAF5EF", fg=app.text_color, 
                                insertbackground=app.text_color, bd=0,
                                relief='flat', highlightthickness=0)
-        new_pw_entry.pack(fill='x', ipady=10, pady=(0, 15))
+        new_pw_entry.pack(side='left', fill='x', expand=True, ipady=10)
         
-        # Confirm new password
+        def toggle_new_password():
+            if new_pw_entry.cget('show') == '●':
+                new_pw_entry.config(show='')
+                new_show_btn.config(text='🙈')
+            else:
+                new_pw_entry.config(show='●')
+                new_show_btn.config(text='👁')
+        
+        new_show_btn = tk.Button(new_pw_frame, text="👁", font=("Segoe UI", 10),
+                                bg="#FAF5EF", fg=app.text_color, bd=0, cursor="hand2",
+                                command=toggle_new_password, width=3)
+        new_show_btn.pack(side='right', padx=(5, 0), ipady=10)
+        
+        # Password requirements
+        req_frame = tk.Frame(password_card, bg=app.secondary_bg)
+        req_frame.pack(fill='x', pady=(0, 10))
+        
+        requirements_text = ("Password Requirements: 8+ chars, 1-3 numbers, 1 special symbol (@#$%&*!)")
+        req_label = tk.Label(req_frame, text=requirements_text, font=("Segoe UI", 9),
+                           bg=app.secondary_bg, fg=app.accent_color, wraplength=400)
+        req_label.pack(anchor='w')
+        
+        # Password strength indicator
+        strength_frame = tk.Frame(password_card, bg=app.secondary_bg)
+        strength_frame.pack(fill='x', pady=(0, 15))
+        
+        tk.Label(strength_frame, text="Password Strength:", font=("Segoe UI", 9, "bold"),
+                bg=app.secondary_bg, fg=app.text_secondary).pack(anchor='w')
+        
+        strength_bar = tk.Frame(strength_frame, bg="#e0e0e0", height=6)
+        strength_bar.pack(fill='x', pady=(5, 0))
+        
+        strength_fill = tk.Frame(strength_bar, bg="red", width=0, height=6)
+        strength_fill.place(relx=0, rely=0, relwidth=0, height=6)
+        
+        strength_label = tk.Label(strength_frame, text="Weak", font=("Segoe UI", 9),
+                                bg=app.secondary_bg, fg="red")
+        strength_label.pack(anchor='w', pady=(3, 0))
+        
+        def check_password_strength(event=None):
+            password = new_pw_entry.get()
+            strength = 0
+            width = 0
+            
+            # Check length
+            if len(password) >= 8:
+                strength += 25
+                width += 0.25
+            
+            # Check for numbers
+            num_count = sum(1 for c in password if c.isdigit())
+            if 1 <= num_count <= 3:
+                strength += 25
+                width += 0.25
+            
+            # Check for special characters
+            special_chars = set('@#$%&*!')
+            if any(c in special_chars for c in password):
+                strength += 25
+                width += 0.25
+            
+            # Check for letters
+            if any(c.isalpha() for c in password):
+                strength += 25
+                width += 0.25
+            
+            # Update strength bar
+            strength_fill.place(relx=0, rely=0, relwidth=width, height=6)
+            
+            # Update color and label
+            if strength >= 75:
+                strength_fill.config(bg="green")
+                strength_label.config(text="Strong", fg="green")
+            elif strength >= 50:
+                strength_fill.config(bg="orange")
+                strength_label.config(text="Medium", fg="orange")
+            else:
+                strength_fill.config(bg="red")
+                strength_label.config(text="Weak", fg="red")
+        
+        new_pw_entry.bind('<KeyRelease>', check_password_strength)
+        
+        # Confirm new password with toggle
         tk.Label(password_card, text="Confirm New Password", font=("Segoe UI", 10),
                 bg=app.secondary_bg, fg=app.text_secondary).pack(anchor='w', pady=(0, 5))
         
-        confirm_pw_entry = tk.Entry(password_card, font=("Segoe UI", 11), show="●",
+        confirm_pw_frame = tk.Frame(password_card, bg=app.secondary_bg)
+        confirm_pw_frame.pack(fill='x', pady=(0, 20))
+        
+        confirm_pw_entry = tk.Entry(confirm_pw_frame, font=("Segoe UI", 11), show="●",
                                     bg="#FAF5EF", fg=app.text_color, 
                                     insertbackground=app.text_color, bd=0,
                                     relief='flat', highlightthickness=0)
-        confirm_pw_entry.pack(fill='x', ipady=10, pady=(0, 20))
+        confirm_pw_entry.pack(side='left', fill='x', expand=True, ipady=10)
+        
+        def toggle_confirm_password():
+            if confirm_pw_entry.cget('show') == '●':
+                confirm_pw_entry.config(show='')
+                confirm_show_btn.config(text='🙈')
+            else:
+                confirm_pw_entry.config(show='●')
+                confirm_show_btn.config(text='👁')
+        
+        confirm_show_btn = tk.Button(confirm_pw_frame, text="👁", font=("Segoe UI", 10),
+                                    bg="#FAF5EF", fg=app.text_color, bd=0, cursor="hand2",
+                                    command=toggle_confirm_password, width=3)
+        confirm_show_btn.pack(side='right', padx=(5, 0), ipady=10)
         
         # Change password button with sage green
         change_pw_btn = tk.Button(password_card, text="Change Password",
@@ -148,7 +265,7 @@ class AccountsFrame(tk.Frame):
         self.load_order_history(orders_frame)
     
     def change_password(self, current_pw, new_pw, confirm_pw, entry1, entry2, entry3):
-        """Change user password"""
+        """Change user password with enhanced validation"""
         if not current_pw or not new_pw or not confirm_pw:
             messagebox.showerror("Error", "Please fill in all password fields")
             return
@@ -157,8 +274,26 @@ class AccountsFrame(tk.Frame):
             messagebox.showerror("Error", "New passwords do not match")
             return
         
-        if len(new_pw) < 6:
-            messagebox.showerror("Error", "Password must be at least 6 characters long")
+        # Enhanced password validation
+        if len(new_pw) < 8:
+            messagebox.showerror("Error", "Password must be at least 8 characters long")
+            return
+        
+        # Check for numbers (1-3 required)
+        num_count = sum(1 for c in new_pw if c.isdigit())
+        if not (1 <= num_count <= 3):
+            messagebox.showerror("Error", "Password must contain 1-3 numbers")
+            return
+        
+        # Check for special characters
+        special_chars = set('@#$%&*!')
+        if not any(c in special_chars for c in new_pw):
+            messagebox.showerror("Error", "Password must contain at least one special symbol (@#$%&*!)")
+            return
+        
+        # Check for letters
+        if not any(c.isalpha() for c in new_pw):
+            messagebox.showerror("Error", "Password must contain letters")
             return
         
         try:

@@ -284,6 +284,15 @@ class CafeSystemApp:
             self.admin_window = None
             self.admin_app_instance = None
             
+            # Check if kiosk mode setting changed and update accordingly
+            print("🔧 Admin panel closed, refreshing kiosk mode from database")
+            self.refresh_kiosk_mode_from_db()
+            
+            # If we're on PC selection screen, refresh it to show updated status
+            if not self.current_user:
+                print("🔧 Refreshing PC selection screen after admin panel close")
+                self.show_pc_selection()
+            
             # Restore global grab if still in kiosk mode
             if self.is_locked:
                 self.root.grab_set_global()
@@ -340,6 +349,26 @@ class CafeSystemApp:
         except Error as e:
             print(f"🔧 Database error checking kiosk mode: {e}, defaulting to enabled")
             return True
+    
+    def refresh_kiosk_mode_from_db(self):
+        """Refresh kiosk mode based on current database setting"""
+        try:
+            kiosk_should_be_enabled = self.should_enable_kiosk_mode()
+            current_lock_status = self.is_locked
+            
+            print(f"🔧 Kiosk mode check: DB says {kiosk_should_be_enabled}, current status is {current_lock_status}")
+            
+            if kiosk_should_be_enabled and not current_lock_status:
+                print("🔧 Enabling kiosk mode based on database setting")
+                self.enable_pc_lock()
+            elif not kiosk_should_be_enabled and current_lock_status:
+                print("🔧 Disabling kiosk mode based on database setting")
+                self.disable_pc_lock()
+            else:
+                print(f"🔧 Kiosk mode already in correct state: {current_lock_status}")
+                
+        except Exception as e:
+            print(f"🔧 Error refreshing kiosk mode: {e}")
     
     def enable_pc_lock(self):
         """Enable PC lock mode - prevents alt-tab, task manager, etc."""
@@ -1012,15 +1041,26 @@ class CafeSystemApp:
         tk.Label(container, text="Select Your PC Station ☕", font=("Segoe UI", 18),
                 bg=self.bg_color, fg=self.text_secondary).pack(pady=(0, 10))
         
-        # Kiosk mode indicator
-        kiosk_frame = tk.Frame(container, bg="#e74c3c", padx=15, pady=8)
-        kiosk_frame.pack(pady=(0, 20))
-        
-        tk.Label(kiosk_frame, text="🔒 KIOSK MODE ACTIVE", font=("Segoe UI", 12, "bold"),
-                bg="#e74c3c", fg="white").pack(side='left')
-        
-        tk.Label(kiosk_frame, text="• Alt+Tab Disabled • System Keys Blocked • Secure Mode", 
-                font=("Segoe UI", 9), bg="#e74c3c", fg="white").pack(side='left', padx=(10, 0))
+        # Kiosk mode indicator - dynamic based on setting
+        kiosk_enabled = self.should_enable_kiosk_mode()
+        if kiosk_enabled:
+            kiosk_frame = tk.Frame(container, bg="#e74c3c", padx=15, pady=8)
+            kiosk_frame.pack(pady=(0, 20))
+            
+            tk.Label(kiosk_frame, text="🔒 KIOSK MODE ACTIVE", font=("Segoe UI", 12, "bold"),
+                    bg="#e74c3c", fg="white").pack(side='left')
+            
+            tk.Label(kiosk_frame, text="• Alt+Tab Disabled • System Keys Blocked • Secure Mode", 
+                    font=("Segoe UI", 9), bg="#e74c3c", fg="white").pack(side='left', padx=(10, 0))
+        else:
+            kiosk_frame = tk.Frame(container, bg="#FFA726", padx=15, pady=8)
+            kiosk_frame.pack(pady=(0, 20))
+            
+            tk.Label(kiosk_frame, text="🔓 KIOSK MODE DISABLED", font=("Segoe UI", 12, "bold"),
+                    bg="#FFA726", fg="white").pack(side='left')
+            
+            tk.Label(kiosk_frame, text="• Normal Window Behavior • Reduced Security Mode", 
+                    font=("Segoe UI", 9), bg="#FFA726", fg="white").pack(side='left', padx=(10, 0))
         
         # Admin and Emergency buttons
         admin_frame = tk.Frame(container, bg=self.bg_color)
@@ -1131,7 +1171,7 @@ class CafeSystemApp:
         refresh_btn = tk.Button(container, text="↻ Refresh Status", font=("Segoe UI", 11),
                             bg=self.primary_btn, fg=self.secondary_bg, bd=0,
                             cursor="hand2", padx=20, pady=10,
-                            command=self.show_pc_selection)
+                            command=self.refresh_pc_selection_with_kiosk_check)
         refresh_btn.pack(pady=20)
         
         # Auto-refresh
@@ -1146,6 +1186,22 @@ class CafeSystemApp:
                 self.root.after(5000, self.refresh_pc_data)
         except:
             pass
+    
+    def refresh_pc_selection_with_kiosk_check(self):
+        """Refresh PC selection screen and check for kiosk mode changes"""
+        try:
+            # First refresh kiosk mode from database
+            self.refresh_kiosk_mode_from_db()
+            
+            # Then refresh the PC selection screen
+            self.show_pc_selection()
+            
+            print("🔧 PC selection refreshed with kiosk mode check")
+            
+        except Exception as e:
+            print(f"🔧 Error refreshing PC selection with kiosk check: {e}")
+            # Fallback to just showing PC selection
+            self.show_pc_selection()
     
     def select_pc(self, pc_name):
         """Select PC and check if locked before proceeding"""
@@ -1231,10 +1287,17 @@ class CafeSystemApp:
                                  insertbackground=self.text_color, bd=0, relief='flat')
         password_entry.pack(side='left', ipady=10, fill='x', expand=True)
         
-        show_password_var = tk.BooleanVar()
+        def toggle_login_password():
+            if password_entry.cget('show') == '●':
+                password_entry.config(show='')
+                show_btn.config(text='🙈')
+            else:
+                password_entry.config(show='●')
+                show_btn.config(text='👁')
+        
         show_btn = tk.Button(password_frame, text="👁", font=("Segoe UI", 10),
                             bg="#FAF5EF", fg=self.text_color, bd=0, cursor="hand2",
-                            command=lambda: self.toggle_password_visibility(password_entry, show_password_var))
+                            command=toggle_login_password, width=3)
         show_btn.pack(side='right', padx=(5, 0), ipady=10)
         
         # Login button
@@ -1250,7 +1313,7 @@ class CafeSystemApp:
         
         tk.Button(button_frame, text="← Back to PC Selection", font=("Segoe UI", 10),
                  bg=self.secondary_bg, fg=self.accent_color, bd=0, cursor="hand2",
-                 command=self.show_pc_selection).pack(side='left', padx=(0, 20))
+                 command=self.refresh_pc_selection_with_kiosk_check).pack(side='left', padx=(0, 20))
         
         tk.Button(button_frame, text="🚨 Emergency Exit", font=("Segoe UI", 10, "bold"),
                  bg="#e74c3c", fg="white", bd=0, cursor="hand2",
@@ -1734,9 +1797,8 @@ class CafeSystemApp:
                               f"You have been successfully logged out.\n\n"
                               f"Thank you for using Starbroke!")
         
-        # Return to PC selection screen and re-enable PC lock
-        self.show_pc_selection()
-        self.enable_pc_lock()
+        # Return to PC selection screen and refresh kiosk mode from database
+        self.refresh_pc_selection_with_kiosk_check()
     
     def clear_window(self):
         """Clear all widgets from main window ONLY (don't touch Toplevel windows)"""

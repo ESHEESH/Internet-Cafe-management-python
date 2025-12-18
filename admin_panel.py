@@ -269,7 +269,7 @@ class AdminApp:
             ("⏳ Pending Accounts", lambda: self.show_pending_accounts(content)),
             ("👥 All Users", lambda: self.show_all_users(content)),
             ("📋 All Orders", lambda: self.show_all_orders(content)),
-            ("🔒 Kiosk Mode Control", lambda: self.show_kiosk_control(content)),
+            ("🔒 Admin Controls", lambda: self.show_kiosk_control(content)),
             ("🚪 Logout", self.show_admin_login)
         ]
         
@@ -1574,10 +1574,17 @@ class AdminApp:
                                   bg="#3d3d3d", fg=self.text_color, insertbackground=self.text_color, bd=0)
         password_entry.pack(side='left', fill='x', expand=True, ipady=8)
         
-        show_password_var = tk.BooleanVar()
+        def toggle_account_password():
+            if password_entry.cget('show') == '●':
+                password_entry.config(show='')
+                show_btn.config(text='🙈')
+            else:
+                password_entry.config(show='●')
+                show_btn.config(text='👁')
+        
         show_btn = tk.Button(password_frame, text="👁", font=("Segoe UI", 10),
                             bg="#3d3d3d", fg=self.text_color, bd=0, cursor="hand2",
-                            command=lambda: self.toggle_password_visibility(password_entry, show_password_var))
+                            command=toggle_account_password, width=3)
         show_btn.pack(side='right', padx=(5, 0), ipady=8)
         
         # Password strength indicator
@@ -2386,17 +2393,24 @@ class AdminApp:
     • 🟡 YELLOW = Occupied  
     • 🔴 RED = Offline
     • ⚪ GRAY = Maintenance
+    • 🔒 GRAY = Admin Locked
 
     PC CARD BUTTONS:
-    • ⚡ = Force Logout (end session)
-    • 🔒 = Lock PC (prevent logins)
-    • 🔓 = Unlock PC (allow logins)
+    • ⚡ = Force Logout (end session immediately)
+    • 🔒 = Lock PC (prevent user logins)
+    • 🔓 = Unlock PC (allow user logins)
 
     MANAGEMENT:
     • Auto-refreshes every 5 seconds
     • Monitor remaining session time
     • Force logout overstaying users
-    • Lock PCs for maintenance""",
+    • Lock individual PCs for maintenance
+    • Cannot lock occupied PCs (logout first)
+
+    REAL-TIME UPDATES:
+    • Changes take effect immediately
+    • No application restart required
+    • Locked PCs show "Admin Locked" status""",
 
             "Inventory": """📦 INVENTORY MANAGEMENT
 
@@ -2491,7 +2505,13 @@ class AdminApp:
 
     SEARCH:
     • Search by username or name
-    • Real-time filtering""",
+    • Real-time filtering
+
+    KIOSK MODE INTERACTION:
+    • User sessions respect current kiosk mode
+    • Changes apply when users login/logout
+    • Emergency exit always available to users
+    • Admin can adjust kiosk mode anytime""",
 
             "Order Management": """📋 ORDER MANAGEMENT
 
@@ -2539,6 +2559,50 @@ class AdminApp:
     • Monitor sales trends
     • Identify popular items""",
 
+            "Kiosk Mode Control": """🔒 KIOSK MODE CONTROL - SECURITY SYSTEM
+
+    WHAT IS KIOSK MODE?
+    • System-wide security feature
+    • Prevents users from Alt+Tab switching
+    • Blocks Task Manager and system keys
+    • Forces fullscreen application lock
+    • Enhances security for public computers
+
+    CURRENT STATUS DISPLAY:
+    • 🔒 ENABLED = Security features active
+    • 🔓 DISABLED = Normal window behavior
+    • Real-time status from database
+
+    TOGGLE CONTROLS:
+    • Click "ENABLE Kiosk Mode" to activate security
+    • Click "DISABLE Kiosk Mode" to allow normal use
+    • Changes apply to ALL user sessions
+    • Confirmation dialog prevents accidents
+
+    REAL-TIME UPDATES:
+    ✅ Changes take effect IMMEDIATELY
+    ✅ No application restart required
+    ✅ New user logins use current setting
+    ✅ PC selection screen updates instantly
+    ✅ User logout refreshes kiosk status
+
+    WHEN TO USE:
+    • ENABLE: Public internet cafe (recommended)
+    • ENABLE: High security requirements
+    • DISABLE: Private/trusted environment
+    • DISABLE: Troubleshooting system issues
+
+    IMPORTANT NOTES:
+    ⚠️ Admin panels are NOT affected by kiosk mode
+    ⚠️ Emergency exit always available to users
+    ⚠️ Changes affect ALL users system-wide
+    ⚠️ Existing sessions may need logout/login
+
+    TROUBLESHOOTING:
+    • If users can't access system features → Enable kiosk mode
+    • If users complain about restrictions → Check if disabled
+    • Use "Refresh Status" to verify current setting""",
+
             "General Guide": """🏢 GENERAL ADMIN GUIDE
 
     NAVIGATION:
@@ -2550,6 +2614,7 @@ class AdminApp:
     • Only authorized admins
     • Log out when leaving
     • Secure passwords
+    • Use kiosk mode for public access
 
     COMPLIANCE:
     • Age verification mandatory
@@ -2559,7 +2624,13 @@ class AdminApp:
     SUPPORT:
     • Help users with issues
     • Manage PC sessions
-    • Handle order complaints"""
+    • Handle order complaints
+    • Adjust kiosk mode as needed
+
+    REAL-TIME FEATURES:
+    • Kiosk mode changes apply instantly
+    • PC lock/unlock immediate effect
+    • No restart required for changes"""
         }
         
         # Create a Toplevel window for the help center
@@ -2713,41 +2784,52 @@ class AdminApp:
             messagebox.showerror("Database Error", f"Error loading orders: {e}")
     
     def show_kiosk_control(self, parent):
-        """Display kiosk mode control panel"""
+        """Display kiosk mode control panel with admin creation on the right"""
         self.clear_content(parent)
-        
-        container = tk.Frame(parent, bg=self.bg_color)
-        container.pack(fill='both', expand=True, padx=40, pady=40)
-        
+
+        # Main container with two columns
+        main_container = tk.Frame(parent, bg=self.bg_color)
+        main_container.pack(fill='both', expand=True, padx=20, pady=20)
+
+        # LEFT PANEL - Kiosk Mode Control (70% width)
+        left_panel = tk.Frame(main_container, bg=self.bg_color)
+        left_panel.pack(side='left', fill='both', expand=True, padx=(0, 10))
+
+        # RIGHT PANEL - Admin Account Creation (30% width)
+        right_panel = tk.Frame(main_container, bg=self.bg_color, width=350)
+        right_panel.pack(side='right', fill='y', padx=(10, 0))
+        right_panel.pack_propagate(False)  # Keep fixed width
+
+        # ==================== LEFT PANEL: KIOSK MODE CONTROL ====================
         # Title
-        tk.Label(container, text="Kiosk Mode Control", font=("Segoe UI", 32, "bold"),
-                bg=self.bg_color, fg=self.text_color).pack(anchor='w', pady=(0, 30))
-        
+        tk.Label(left_panel, text="Admin Controls", font=("Segoe UI", 28, "bold"),
+                bg=self.bg_color, fg=self.text_color).pack(anchor='w', pady=(0, 25))
+
         # Main control frame
-        control_frame = tk.Frame(container, bg=self.secondary_bg, padx=50, pady=40)
-        control_frame.pack(fill='x', pady=(0, 30))
-        
+        control_frame = tk.Frame(left_panel, bg=self.secondary_bg, padx=40, pady=35)
+        control_frame.pack(fill='both', expand=True)
+
         # Current status
         status_frame = tk.Frame(control_frame, bg=self.secondary_bg)
-        status_frame.pack(fill='x', pady=(0, 30))
-        
+        status_frame.pack(fill='x', pady=(0, 25))
+
         tk.Label(status_frame, text="Current Kiosk Mode Status:", font=("Segoe UI", 16, "bold"),
                 bg=self.secondary_bg, fg=self.text_color).pack(anchor='w')
-        
-        # Get current kiosk mode status from database
+
+        # Get current kiosk mode status
         kiosk_status = self.get_kiosk_mode_status()
         status_color = self.success_color if kiosk_status else self.danger_color
         status_text = "🔒 ENABLED" if kiosk_status else "🔓 DISABLED"
-        
+
         self.kiosk_status_label = tk.Label(status_frame, text=status_text, 
-                                          font=("Segoe UI", 20, "bold"),
+                                          font=("Segoe UI", 24, "bold"),
                                           bg=self.secondary_bg, fg=status_color)
         self.kiosk_status_label.pack(anchor='w', pady=(10, 0))
-        
+
         # Description
         desc_frame = tk.Frame(control_frame, bg=self.secondary_bg)
         desc_frame.pack(fill='x', pady=(0, 30))
-        
+
         if kiosk_status:
             desc_text = ("Kiosk Mode is currently ENABLED:\n"
                         "• Users cannot Alt+Tab or switch windows\n"
@@ -2760,18 +2842,23 @@ class AdminApp:
                         "• System keys are functional\n"
                         "• Normal window behavior\n"
                         "• Reduced security mode")
-        
-        self.kiosk_desc_label = tk.Label(desc_frame, text=desc_text, 
-                                        font=("Segoe UI", 12),
-                                        bg=self.secondary_bg, fg=self.text_secondary,
-                                        justify='left')
-        self.kiosk_desc_label.pack(anchor='w')
-        
+
+        # Use Text widget for description
+        desc_text_widget = tk.Text(desc_frame, height=5, font=("Segoe UI", 12),
+                                  bg=self.secondary_bg, fg=self.text_secondary,
+                                  wrap="word", relief='flat', bd=0, highlightthickness=0)
+        desc_text_widget.pack(fill='x')
+        desc_text_widget.insert('1.0', desc_text)
+        desc_text_widget.config(state='disabled')
+
         # Control buttons
         button_frame = tk.Frame(control_frame, bg=self.secondary_bg)
-        button_frame.pack(fill='x', pady=(30, 0))
-        
-        # Toggle button
+        button_frame.pack(fill='x', pady=(20, 0))
+
+        # Button container for centering
+        btn_container = tk.Frame(button_frame, bg=self.secondary_bg)
+        btn_container.pack()
+
         if kiosk_status:
             toggle_text = "🔓 DISABLE Kiosk Mode"
             toggle_color = self.danger_color
@@ -2780,35 +2867,280 @@ class AdminApp:
             toggle_text = "🔒 ENABLE Kiosk Mode"
             toggle_color = self.success_color
             toggle_command = self.enable_global_kiosk_mode
-        
-        self.kiosk_toggle_btn = tk.Button(button_frame, text=toggle_text, 
+
+        self.kiosk_toggle_btn = tk.Button(btn_container, text=toggle_text, 
                                          font=("Segoe UI", 14, "bold"),
                                          bg=toggle_color, fg="white", bd=0, cursor="hand2",
-                                         padx=30, pady=15, command=toggle_command)
-        self.kiosk_toggle_btn.pack(side='left', padx=(0, 20))
-        
-        # Refresh button
-        tk.Button(button_frame, text="↻ Refresh Status", font=("Segoe UI", 12),
+                                         padx=35, pady=14, command=toggle_command)
+        self.kiosk_toggle_btn.pack(side='left', padx=(0, 15))
+
+        tk.Button(btn_container, text="↻ Refresh Status", font=("Segoe UI", 14),
                  bg=self.accent_color, fg="white", bd=0, cursor="hand2",
-                 padx=25, pady=15, 
+                 padx=30, pady=14,
                  command=lambda: self.show_kiosk_control(parent)).pack(side='left')
-        
-        # Warning section
-        warning_frame = tk.Frame(container, bg="#2d1810", relief='solid', bd=2)
-        warning_frame.pack(fill='x', pady=(20, 0))
-        
-        tk.Label(warning_frame, text="⚠️ IMPORTANT NOTES", font=("Segoe UI", 14, "bold"),
-                bg="#2d1810", fg="#FFA726").pack(pady=(15, 10))
-        
+
+        # IMPORTANT NOTES section
+        warning_frame = tk.Frame(control_frame, bg="#2d1810", relief='solid', bd=2)
+        warning_frame.pack(fill='x', pady=(40, 0))
+
+        tk.Label(warning_frame, text="⚠️ IMPORTANT NOTES", font=("Segoe UI", 16, "bold"),
+                bg="#2d1810", fg="#FFA726").pack(pady=(18, 12))
+
         warning_text = ("• Kiosk Mode affects ALL user sessions system-wide\n"
                        "• Changes take effect immediately for new logins\n"
                        "• Existing user sessions may need to be restarted\n"
                        "• Admin panels are not affected by kiosk mode\n"
                        "• Emergency exit is always available regardless of mode")
-        
-        tk.Label(warning_frame, text=warning_text, font=("Segoe UI", 11),
-                bg="#2d1810", fg="white", justify='left').pack(padx=20, pady=(0, 15))
+
+        # Use Text widget for warning notes
+        warning_text_widget = tk.Text(warning_frame, height=6, font=("Segoe UI", 11),
+                                     bg="#2d1810", fg="white", wrap="word",
+                                     relief='flat', bd=0, highlightthickness=0,
+                                     spacing1=3, spacing3=3)
+        warning_text_widget.pack(fill='x', padx=20, pady=(0, 18))
+        warning_text_widget.insert('1.0', warning_text)
+        warning_text_widget.config(state='disabled')
+
+        # ==================== RIGHT PANEL: ADMIN ACCOUNT CREATION ====================
+        # Title for right panel
+        tk.Label(right_panel, text="Admin Account Creation", font=("Segoe UI", 20, "bold"),
+                bg=self.bg_color, fg=self.text_color).pack(anchor='w', pady=(0, 25))
+
+        # Admin creation frame
+        admin_frame = tk.Frame(right_panel, bg=self.secondary_bg, padx=25, pady=25)
+        admin_frame.pack(fill='both', expand=True)
+
+        # Username field
+        tk.Label(admin_frame, text="Username:", font=("Segoe UI", 12, "bold"),
+                bg=self.secondary_bg, fg=self.text_color).pack(anchor='w', pady=(0, 8))
+
+        username_entry = tk.Entry(admin_frame, font=("Segoe UI", 12),
+                                 bg="white", fg="black", bd=1, relief='solid')
+        username_entry.pack(fill='x', pady=(0, 20))
+
+        # Password field with show/hide toggle
+        tk.Label(admin_frame, text="Password:", font=("Segoe UI", 12, "bold"),
+                bg=self.secondary_bg, fg=self.text_color).pack(anchor='w', pady=(0, 8))
+
+        password_frame = tk.Frame(admin_frame, bg=self.secondary_bg)
+        password_frame.pack(fill='x', pady=(0, 5))
+
+        password_entry = tk.Entry(password_frame, font=("Segoe UI", 12),
+                                 bg="white", fg="black", bd=1, relief='solid',
+                                 show="•")
+        password_entry.pack(side='left', fill='x', expand=True)
+
+        # Show password button
+        show_pass_var = tk.BooleanVar()
+        def toggle_password():
+            if show_pass_var.get():
+                password_entry.config(show="")
+                show_pass_btn.config(text="🙈")
+                show_pass_var.set(False)
+            else:
+                password_entry.config(show="•")
+                show_pass_btn.config(text="👁")
+                show_pass_var.set(True)
+
+        show_pass_btn = tk.Button(password_frame, text="👁", font=("Segoe UI", 10),
+                                 bg="white", fg="black", bd=1, cursor="hand2",
+                                 command=toggle_password, width=3)
+        show_pass_btn.pack(side='right', padx=(5, 0))
+
+        # Password requirements
+        req_frame = tk.Frame(admin_frame, bg=self.secondary_bg)
+        req_frame.pack(fill='x', pady=(10, 20))
+
+        requirements_text = ("Password Requirements:\n"
+                           "• Minimum 8 characters\n"
+                           "• 1-3 numbers (0-9)\n"
+                           "• 1 special symbol (@#$%&*!)\n"
+                           "• Letters (a-z, A-Z)")
+
+        req_label = tk.Label(req_frame, text=requirements_text,
+                           font=("Segoe UI", 10),
+                           bg=self.secondary_bg, fg=self.accent_color,
+                           justify='left', anchor='w')
+        req_label.pack(fill='x')
+
+        # Password strength indicator
+        strength_frame = tk.Frame(admin_frame, bg=self.secondary_bg)
+        strength_frame.pack(fill='x', pady=(0, 25))
+
+        tk.Label(strength_frame, text="Password Strength:", font=("Segoe UI", 11, "bold"),
+                bg=self.secondary_bg, fg=self.text_color).pack(anchor='w')
+
+        strength_bar = tk.Frame(strength_frame, bg="#e0e0e0", height=8)
+        strength_bar.pack(fill='x', pady=(8, 0))
+
+        strength_fill = tk.Frame(strength_bar, bg="red", width=0, height=8)
+        strength_fill.place(relx=0, rely=0, relwidth=0, height=8)
+
+        strength_label = tk.Label(strength_frame, text="Weak", font=("Segoe UI", 10),
+                                bg=self.secondary_bg, fg="red")
+        strength_label.pack(anchor='w', pady=(5, 0))
+
+        def check_password_strength(event=None):
+            password = password_entry.get()
+            strength = 0
+            width = 0
+
+            # Check length
+            if len(password) >= 8:
+                strength += 25
+                width += 0.25
+
+            # Check for numbers
+            num_count = sum(1 for c in password if c.isdigit())
+            if 1 <= num_count <= 3:
+                strength += 25
+                width += 0.25
+
+            # Check for special characters
+            special_chars = set('@#$%&*!')
+            if any(c in special_chars for c in password):
+                strength += 25
+                width += 0.25
+
+            # Check for letters
+            if any(c.isalpha() for c in password):
+                strength += 25
+                width += 0.25
+
+            # Update strength bar
+            strength_fill.config(width=0)
+            strength_fill.place(relx=0, rely=0, relwidth=width, height=8)
+
+            # Update color and label
+            if strength >= 75:
+                strength_fill.config(bg="green")
+                strength_label.config(text="Strong", fg="green")
+            elif strength >= 50:
+                strength_fill.config(bg="orange")
+                strength_label.config(text="Medium", fg="orange")
+            else:
+                strength_fill.config(bg="red")
+                strength_label.config(text="Weak", fg="red")
+
+        password_entry.bind('<KeyRelease>', check_password_strength)
+
+        # Generate strong password button
+        def generate_strong_password():
+            import random
+            import string
+
+            # Generate components
+            letters = ''.join(random.choices(string.ascii_letters, k=4))
+            numbers = ''.join(random.choices(string.digits, k=random.randint(1, 3)))
+            symbols = random.choice('@#$%&*!')
+
+            # Combine and shuffle
+            password = letters + numbers + symbols
+
+            # Add more letters if needed to reach 8 characters
+            while len(password) < 8:
+                password += random.choice(string.ascii_letters)
+
+            # Shuffle the password
+            password_list = list(password)
+            random.shuffle(password_list)
+            password = ''.join(password_list)
+
+            # Set the password
+            password_entry.delete(0, tk.END)
+            password_entry.insert(0, password)
+            check_password_strength()
+            # Show the generated password
+            password_entry.config(show="")
+            show_pass_btn.config(text="🙈")
+            show_pass_var.set(False)
+
+        tk.Button(admin_frame, text="🔐 Generate Strong Password", font=("Segoe UI", 11),
+                 bg=self.accent_color, fg="white", bd=0, cursor="hand2",
+                 padx=20, pady=10, command=generate_strong_password).pack(fill='x', pady=(0, 20))
+
+        # Create Account button
+        def create_admin_account():
+            username = username_entry.get().strip()
+            password = password_entry.get()
+
+            # Validate inputs
+            if not username:
+                messagebox.showerror("Error", "Please enter a username")
+                return
+
+            if not password:
+                messagebox.showerror("Error", "Please enter a password")
+                return
+
+            # Validate password requirements
+            if len(password) < 8:
+                messagebox.showerror("Error", "Password must be at least 8 characters")
+                return
+
+            num_count = sum(1 for c in password if c.isdigit())
+            if not (1 <= num_count <= 3):
+                messagebox.showerror("Error", "Password must contain 1-3 numbers")
+                return
+
+            special_chars = set('@#$%&*!')
+            if not any(c in special_chars for c in password):
+                messagebox.showerror("Error", "Password must contain at least one special symbol (@#$%&*!)")
+                return
+
+            if not any(c.isalpha() for c in password):
+                messagebox.showerror("Error", "Password must contain letters")
+                return
+
+            # Create admin account
+            success = self.create_admin_user(username, password)
+            if success:
+                messagebox.showinfo("Success", f"Admin account '{username}' created successfully!")
+                username_entry.delete(0, tk.END)
+                password_entry.delete(0, tk.END)
+                check_password_strength()
+            else:
+                messagebox.showerror("Error", "Failed to create admin account")
+
+        create_btn = tk.Button(admin_frame, text="➕ Create Admin Account", font=("Segoe UI", 14, "bold"),
+                              bg=self.success_color, fg="white", bd=0, cursor="hand2",
+                              padx=30, pady=15, command=create_admin_account)
+        create_btn.pack(fill='x')
     
+    def create_admin_user(self, username, password):
+        """Create a new admin user account"""
+        try:
+            cursor = self.db_connection.cursor()
+            
+            # Check if username already exists
+            cursor.execute("SELECT COUNT(*) FROM admins WHERE username = %s", (username,))
+            if cursor.fetchone()[0] > 0:
+                cursor.close()
+                messagebox.showerror("Error", f"Username '{username}' already exists")
+                return False
+            
+            # Hash the password
+            hashed_password = self.hash_password(password)
+            
+            # Insert new admin
+            cursor.execute("""
+                INSERT INTO admins (username, password, full_name) 
+                VALUES (%s, %s, %s)
+            """, (username, hashed_password, f"Admin {username}"))
+            
+            self.db_connection.commit()
+            cursor.close()
+            
+            print(f"✅ Admin account created: {username}")
+            return True
+            
+        except Error as e:
+            print(f"❌ Error creating admin account: {e}")
+            if 'cursor' in locals():
+                cursor.close()
+                self.db_connection.rollback()
+            return False
+
     def get_kiosk_mode_status(self):
         """Get kiosk mode status from database"""
         try:
@@ -2930,25 +3262,10 @@ class AdminApp:
     def notify_main_app_kiosk_change(self, enable_kiosk):
         """Notify main application about kiosk mode changes"""
         try:
-            # Try to find the main application window
-            main_window = None
-            
-            # Look through all top-level windows
-            for widget in self.root.winfo_toplevel().winfo_children():
-                # Check if this widget has the methods we need (main app)
-                if hasattr(widget, 'enable_pc_lock') and hasattr(widget, 'disable_pc_lock'):
-                    main_window = widget
-                    break
-            
-            if main_window:
-                if enable_kiosk:
-                    main_window.enable_pc_lock()
-                    print("🔧 Notified main app to enable kiosk mode")
-                else:
-                    main_window.disable_pc_lock()
-                    print("🔧 Notified main app to disable kiosk mode")
-            else:
-                print("🔧 Could not find main app to notify about kiosk mode change")
+            # The main app will check the database setting when needed
+            # We don't need to directly communicate with it since the database is the source of truth
+            print(f"🔧 Kiosk mode setting updated in database: {'enabled' if enable_kiosk else 'disabled'}")
+            print("🔧 Main app will refresh kiosk mode from database when admin panel closes")
                 
         except Exception as e:
             print(f"🔧 Error notifying main app about kiosk mode change: {e}")
