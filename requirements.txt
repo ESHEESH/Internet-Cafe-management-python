@@ -1,0 +1,13 @@
+# Starbroke Internet Cafe System - Required Packages
+# Install with: pip install -r requirements.txt
+
+# Database connectivity
+mysql-connector-python==8.2.0
+
+# Windows API for PC lock functionality (Windows only)
+pywin32==306
+
+# GUI and image handling
+Pillow==10.1.0
+
+# Note: tkinter comes built-in with Python, no need to install separately
